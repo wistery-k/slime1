@@ -1,0 +1,245 @@
+<html>
+
+<head>
+    <title></title>
+    <link rel="stylesheet" href="index.css">
+</head>
+
+<body>
+    <div id="all-clear-message" class="all-clear-message" style="display: none;">All Clear!</div>
+    <div class="button-container">
+        <button class="top-button active" data-enemy="0">1</button>
+        <button class="top-button" data-enemy="1">2</button>
+        <button class="top-button" data-enemy="2">3</button>
+    </div>
+    <div class="full-width-container">
+        <div class="hp-bar-container">
+            <div class="hp-bar" id="hp-bar-you"></div>
+            <img src="slimeGaming.png" id="imageYou">
+        </div>
+        <div class="hp-bar-container">
+            <div class="hp-bar" id="hp-bar-opponent"></div>
+            <img src="slimeBlue.png" id="imageEnemy">
+        </div>
+    </div>
+    <div id="rectangles"></div>
+    <button id="start-button" class="start-button">Start</button>
+    <script src="main.js"></script>
+    <script>
+        const enemies = [
+            {
+                "name": "BlockKun",
+                "play": (moves, frame) => {
+                    return moves.find(move => move.prop === "B");
+                },
+                "image": "slimeBlue.png",
+                "image2": "slimeBlue2.png"
+            },
+            {
+                "name": "ThrowKun",
+                "play": (moves, frame) => {
+                    return moves.find(move => move.prop === "T");
+                },
+                "image": "slimeGreen.png",
+                "image2": "slimeGreen2.png"
+            },
+            {
+                "name": "mutekiKun",
+                "play": (moves, frame) => {
+                    return moves.find(move => move.prop === "I");
+                },
+                "image": "slimeYellow.png",
+                "image2": "slimeYellow2.png"
+            }
+        ];
+
+        document.querySelectorAll('.top-button').forEach(button => {
+            button.addEventListener('click', () => {
+                document.querySelectorAll('.top-button').forEach(btn => btn.classList.remove('active'));
+                button.classList.add('active');
+                const enemyIndex = button.getAttribute('data-enemy');
+                const enemy = enemies[enemyIndex];
+                document.getElementById('imageEnemy').src = enemy.image;
+                document.getElementById('hp-bar-you').style.width = '100%';
+                document.getElementById('hp-bar-opponent').style.width = '100%';
+                document.getElementById('imageYou').src = 'slimeGaming.png';
+            });
+        });
+
+        const container = document.getElementById('rectangles');
+        for (let i = 0; i < 3; i++) {
+            const rectContainer = document.createElement('div');
+            rectContainer.className = 'rectangle-container';
+            rectContainer.innerHTML = `
+                <div class="rectangle">
+                    <div class="color red"></div>
+                    <div class="color green"></div>
+                    <div class="color yellow"></div>
+                    <div class="color blue"></div>
+                    <div class="handle" style="left: 25%;"></div>
+                    <div class="handle" style="left: 50%;"></div>
+                    <div class="handle" style="left: 75%;"></div>
+                </div>
+                <button class="reset-button"></button>
+            `;
+            container.appendChild(rectContainer);
+        }
+
+        let isDragging = false;
+        let currentHandle = null;
+
+        document.addEventListener('mousedown', (e) => {
+            if (e.target.classList.contains('handle')) {
+                isDragging = true;
+                currentHandle = e.target;
+                document.querySelectorAll('.top-button').forEach(btn => btn.classList.remove('cleared'));
+            }
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (isDragging && currentHandle) {
+                const rect = currentHandle.parentElement;
+                const rectWidth = rect.offsetWidth;
+                const handles = rect.querySelectorAll('.handle');
+                let newLeft = (e.clientX - rect.getBoundingClientRect().left) / rectWidth * 100;
+
+                if (currentHandle === handles[0]) {
+                    newLeft = Math.max(0, Math.min(parseFloat(handles[1].style.left), newLeft));
+                } else if (currentHandle === handles[1]) {
+                    newLeft = Math.max(parseFloat(handles[0].style.left), Math.min(parseFloat(handles[2].style.left), newLeft));
+                } else if (currentHandle === handles[2]) {
+                    newLeft = Math.max(parseFloat(handles[1].style.left), Math.min(100, newLeft));
+                }
+
+                currentHandle.style.left = newLeft + '%';
+
+                const colors = rect.querySelectorAll('.color');
+                colors[0].style.width = handles[0].style.left;
+                colors[1].style.left = handles[0].style.left;
+                colors[1].style.width = (parseFloat(handles[1].style.left) - parseFloat(handles[0].style.left)) + '%';
+                colors[2].style.left = handles[1].style.left;
+                colors[2].style.width = (parseFloat(handles[2].style.left) - parseFloat(handles[1].style.left)) + '%';
+                colors[3].style.left = handles[2].style.left;
+                colors[3].style.width = (100 - parseFloat(handles[2].style.left)) + '%';
+            }
+        });
+
+        document.addEventListener('mouseup', () => {
+            isDragging = false;
+            currentHandle = null;
+        });
+
+        document.querySelectorAll('.reset-button').forEach(button => {
+            button.addEventListener('click', () => {
+                document.querySelectorAll('.top-button').forEach(btn => btn.classList.remove('cleared'));
+                const rect = button.previousElementSibling;
+                const handles = rect.querySelectorAll('.handle');
+                const colors = rect.querySelectorAll('.color');
+                handles[0].style.left = '25%';
+                handles[1].style.left = '50%';
+                handles[2].style.left = '75%';
+                colors[0].style.width = '25%';
+                colors[1].style.left = '25%';
+                colors[1].style.width = '25%';
+                colors[2].style.left = '50%';
+                colors[2].style.width = '25%';
+                colors[3].style.left = '75%';
+                colors[3].style.width = '25%';
+            });
+        });
+
+        document.getElementById('start-button').addEventListener('click', () => {
+            const startButton = document.getElementById('start-button');
+            startButton.disabled = true;
+            startButton.classList.add('disabled');
+            const maxHp = 50000;
+            let hpYou = maxHp;
+            let hpOpponent = maxHp;
+            const hpBarYou = document.getElementById('hp-bar-you');
+            const hpBarOpponent = document.getElementById('hp-bar-opponent');
+
+            const rects = Array.from(document.querySelectorAll('.rectangle'));
+            const colorsOfRects = rects.map(rect => Array.from(rect.querySelectorAll('.color')).map(color => color.clientWidth));
+
+            const you = {
+                name: "You",
+                play: (moves, frame) => {
+                    const getMoveFromUI = (rectIndex) => {
+                        const weights = colorsOfRects[rectIndex];
+                        const totalWeight = weights.reduce((acc, weight) => acc + weight, 0);
+                        console.log(weights, totalWeight);
+                        const random = Math.random() * totalWeight;
+                        let cumulativeWeight = 0;
+                        for (let i = 0; i < weights.length; i++) {
+                            cumulativeWeight += weights[i];
+                            if (random < cumulativeWeight) {
+                                switch (i) {
+                                    case 0: return getMoveByName(moves, "LP");
+                                    case 1: return getMoveByName(moves, "Throw");
+                                    case 2: return getMoveByName(moves, "DP");
+                                    case 3: return getMoveByName(moves, "Block");
+                                }
+                            }
+                        }
+                    };
+
+                    if (frame > 0) {
+                        return getMoveFromUI(0);
+                    } else if (frame === 0) {
+                        return getMoveFromUI(1);
+                    } else {
+                        return getMoveFromUI(2);
+                    }
+                },
+            };
+            const activeButton = document.querySelector('.top-button.active');
+            const enemyIndex = activeButton ? activeButton.getAttribute('data-enemy') : 0;
+            const enemy = enemies[enemyIndex];
+            document.getElementById('imageYou').src = "slimeGaming.png";
+            document.getElementById('imageEnemy').src = enemy.image;
+            const moves = [
+                { name: "LP", prop: "H", startUp: 4, damage: 1000, blockFrame: -2, punished: 0 },
+                { name: "MP", prop: "H", startUp: 6, damage: 1500, blockFrame: +1, punished: 0 },
+                { name: "HP", prop: "H", startUp: 10, damage: 2000, blockFrame: +3, punished: 0 },
+                { name: "Throw", prop: "T", startUp: 5, damage: 1200, blockFrame: 0, punished: 0 },
+                { name: "DP", prop: "I", startUp: 5, damage: 1400, blockFrame: 0, punished: 3000 },
+                { name: "Block", prop: "B", startUp: 0, damage: 0, blockFrame: 0, punished: 0 },
+            ];
+            let frame = 0;
+
+            const intervalId = setInterval(() => {
+                const p1Move = you.play(moves, frame);
+                const p2Move = enemy.play(moves, -frame);
+                const { damage1, damege2, nextFrame } = getRoundResult(p1Move, p2Move, frame);
+                frame = nextFrame;
+                hpYou = Math.max(0, hpYou - damege2);
+                hpOpponent = Math.max(0, hpOpponent - damage1);
+                hpBarYou.style.width = `${(hpYou / maxHp) * 100}%`;
+                hpBarOpponent.style.width = `${(hpOpponent / maxHp) * 100}%`;
+
+                if (hpYou <= 0 || hpOpponent <= 0) {
+                    clearInterval(intervalId);
+                    startButton.disabled = false;
+                    startButton.classList.remove('disabled');
+                    if (hpOpponent <= 0) {
+                        document.getElementById('imageEnemy').src = enemy.image2;
+                        activeButton.classList.add('cleared');
+                        checkAllClear();
+                    }
+                    else if (hpYou <= 0) {
+                        document.getElementById('imageYou').src = "slimeGaming2.png";
+                    }
+                }
+            }, 100);
+        });
+
+        function checkAllClear() {
+            const allCleared = document.querySelectorAll('.top-button.cleared').length === 3;
+            if (allCleared) {
+                document.getElementById('all-clear-message').style.display = 'block';
+            }
+        }
+    </script>
+</body>
+
+</html>
